@@ -1,6 +1,5 @@
 // address module
 use crate::hash::{hash160, hash256};
-use bs58;
 
 pub fn p2pkh(pubkey: &[u8]) -> String {
 
@@ -14,9 +13,9 @@ pub fn p2pkh(pubkey: &[u8]) -> String {
   bs58::encode(addr).into_string()
 }
 
-pub fn wif(prvkey: &Vec<u8>) -> String {
+pub fn wif(prvkey: &[u8]) -> String {
 
-  let mut data = prvkey.clone();
+  let mut data = prvkey.to_owned();
   // prepend network byte (wif)
   data.insert(0, 128);
   // append 1 (not sure why)

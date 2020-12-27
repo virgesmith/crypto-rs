@@ -1,23 +1,20 @@
 
 use crate::key::Key;
 use crate::address;
-use crate::base58;
 use crate::error::Error;
 use crate::CryptoResult;
 
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread;
-use std::sync::{Arc, Mutex, Condvar};
+use std::sync::{Arc, Condvar};
 
 pub fn search(pattern: String, threads: usize) -> CryptoResult<(Key, usize)> {
 
-  // TODO how to do this in bs58, then remove base58 entirely
-  if !base58::is_valid(&pattern) {
-    return Err(Box::new(Error::InvalidBase58Digits(pattern)));
+  // TODO is there a better way to test validity?
+  match bs58::decode(&pattern).into_vec() {
+    Ok(_) => (),
+    Err(_) => { return Err(Box::new(Error::InvalidBase58Digits(pattern))); }
   }
-  // match bs58::decode(pattern).into_vec() {
-  //   Ok(_) => (),
-  //   Err(_) => { return Err(Box::new(Error::InvalidBase58Digits(pattern))); }
-  // }
 
   // be realistic: 58^8 > 1e14
   if pattern.len() > 7 {
@@ -26,7 +23,7 @@ pub fn search(pattern: String, threads: usize) -> CryptoResult<(Key, usize)> {
 
   openssl::init();
 
-  let pair = Arc::new((Mutex::new(false), Condvar::new()));
+  let pair = Arc::new((AtomicBool::new(false), Condvar::new()));
   let pattern = Arc::new(pattern);
 
   let mut handles = vec![];
@@ -50,20 +47,14 @@ pub fn search(pattern: String, threads: usize) -> CryptoResult<(Key, usize)> {
   Ok((k, total_tries))
 }
 
-fn worker(pattern: Arc<String>, pair: Arc<(Mutex<bool>, Condvar)>) -> (Option<Key>, usize) {
+fn worker(pattern: Arc<String>, pair: Arc<(AtomicBool, Condvar)>) -> (Option<Key>, usize) {
 
-  let &(ref lock, ref cvar) = &*pair;
+  let &(ref found, ref cvar) = &*pair;
 
   let mut i = 0;
-  // let mut rng = rand::thread_rng();
-  // let mut rand_buf = [0u8;32];
 
   loop {
 
-    // rng.fill_bytes(&mut rand_buf);
-    // let key = Key::from_private_bytes(&rand_buf).unwrap();
-
-    // this is no slower than using an external RNG to generate the private key
     let key = Key::new().unwrap();
 
     let bytes = key.compressed_public_key().unwrap();
@@ -72,11 +63,11 @@ fn worker(pattern: Arc<String>, pair: Arc<(Mutex<bool>, Condvar)>) -> (Option<Ke
     let cmp = &addr[1..pattern.len()+1];
     i += 1;
     if *pattern == cmp {
-      *lock.lock().unwrap() = true;
+      found.store(true, Ordering::Relaxed);
       cvar.notify_all();
       return (Some(key), i);
     }
-    if *lock.lock().unwrap() {
+    if found.load(Ordering::Relaxed) {
       return (None, i);
     }
   }

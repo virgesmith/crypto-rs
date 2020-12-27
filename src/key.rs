@@ -113,7 +113,7 @@ impl PubKey {
     self.public_key_impl(PointConversionForm::COMPRESSED)
   }
 
-  pub fn verify(&self, msg: &[u8], sig: &Vec<u8>) -> Result<bool, Box<dyn Error>>  {
+  pub fn verify(&self, msg: &[u8], sig: &[u8]) -> Result<bool, Box<dyn Error>>  {
     Ok(EcdsaSig::from_der(&sig)?.verify(&msg, &self.key_impl)?)
   }
 }
