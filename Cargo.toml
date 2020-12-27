@@ -1,0 +1,15 @@
+[package]
+name = "crypto-rs"
+version = "0.1.0"
+authors = ["virgesmith <andrew@friarswood.net>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+openssl = "*"
+pem = "*"
+hex = "^0.4.0"
+base64 = "^0.11.0"
+bs58 = "*"
+lazy_static = "*"
