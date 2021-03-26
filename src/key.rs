@@ -67,7 +67,7 @@ impl Key {
   }
 
   pub fn to_pubkey(&self) -> Result<PubKey, Box<dyn Error>> {
-    Ok(PubKey::from_bytes(&self.public_key()?)?)
+    PubKey::from_bytes(&self.public_key()?)
   }
 }
 
